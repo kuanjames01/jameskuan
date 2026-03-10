@@ -15,7 +15,7 @@ if not st.session_state.logged_in:
 
     name = st.text_input("Enter your name")
     email = st.text_input("Enter your email")
-    password = st.text_input("Enter your password", type="password")
+    password = st.text_input("password", type="password")
 
     if st.button("Login"):
         if name and email and password:
