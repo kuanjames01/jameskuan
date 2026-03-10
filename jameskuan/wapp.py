@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-st.title("pabobohan")
+st.title("you and i - a simple Streamlit app")
 
 # session states
 if "logged_in" not in st.session_state:
