@@ -29,20 +29,20 @@ if not st.session_state.logged_in:
 else:
     user = st.session_state.user_info
 
-    # SIDEBAR MENU
+    # SIDEBAR MENU using selectbox
     st.sidebar.title("Menu")
+    page_choice = st.sidebar.selectbox(
+        "Navigate",
+        ["🏠 Home", "🕐 Recent", "ℹ️ About Us", "⚙️ Settings"],
+    )
 
-    if st.sidebar.button("Home"):
-        st.session_state.page = "Home"
-
-    if st.sidebar.button("Recent"):
-        st.session_state.page = "Recent"
-
-    if st.sidebar.button("About Us"):
-        st.session_state.page = "About"
-
-    if st.sidebar.button("Settings"):
-        st.session_state.page = "Settings"
+    page_map = {
+        "🏠 Home": "Home",
+        "🕐 Recent": "Recent",
+        "ℹ️ About Us": "About",
+        "⚙️ Settings": "Settings",
+    }
+    st.session_state.page = page_map[page_choice]
 
     # ---------------- PAGES ----------------
 
@@ -50,7 +50,6 @@ else:
         st.header("🌐 Translator")
         st.write(f"Welcome, **{user['name']}**! Translate between English, Filipino, and Japanese.")
 
-        # Language selection
         col1, col2 = st.columns(2)
         with col1:
             source_lang = st.selectbox("From", ["English", "Filipino", "Japanese"])
@@ -58,10 +57,8 @@ else:
             target_options = [l for l in ["English", "Filipino", "Japanese"] if l != source_lang]
             target_lang = st.selectbox("To", target_options)
 
-        # Input text
         input_text = st.text_area("Enter text to translate", height=150, placeholder="Type here...")
 
-        # Translation dictionary
         translations = {
             ("English", "Filipino"): {
                 "hello": "kamusta",
@@ -107,7 +104,6 @@ else:
             },
         }
 
-        # Show available example phrases
         pair = (source_lang, target_lang)
         if pair in translations:
             st.markdown("**💡 Available phrases you can type:**")
@@ -122,7 +118,6 @@ else:
                     st.success(f"✅ Translation ({source_lang} → {target_lang}):")
                     st.markdown(f"### {result}")
 
-                    # Save to recent
                     if "recent_translations" not in st.session_state:
                         st.session_state.recent_translations = []
                     st.session_state.recent_translations.insert(0, {
@@ -149,7 +144,7 @@ else:
                     st.write(f"**Translated ({item['to']}):** {item['translated']}")
 
     elif st.session_state.page == "About":
-        st.header("About Us")
+        st.header("ℹ️ About Us")
 
         about_texts = [
             "We are a group of students learning Streamlit.",
@@ -172,6 +167,7 @@ else:
         st.color_picker("Pick a theme color")
 
     # logout button
-    if st.sidebar.button("Logout"):
+    st.sidebar.write("---")
+    if st.sidebar.button("🚪 Logout"):
         st.session_state.logged_in = False
         st.rerun()
