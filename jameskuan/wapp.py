@@ -10,6 +10,8 @@ if "logged_in" not in st.session_state:
     st.session_state.page = "Home"
 if "recent_translations" not in st.session_state:
     st.session_state.recent_translations = []
+if "clear_input" not in st.session_state:
+    st.session_state.clear_input = False
 
 # ---------------- LOGIN PAGE ----------------
 if not st.session_state.logged_in:
@@ -58,7 +60,6 @@ else:
         st.header("🌐 Translator")
         st.write(f"Welcome, **{user['name']}**! Translate between English, Filipino, and Japanese.")
 
-        # Language flags
         lang_options = ["🇺🇸 English", "🇵🇭 Filipino", "🇯🇵 Japanese"]
 
         col1, col2 = st.columns(2)
@@ -68,16 +69,23 @@ else:
             target_options = [l for l in lang_options if l != source_lang_flag]
             target_lang_flag = st.selectbox("To", target_options)
 
-        # Strip flag for dictionary lookup
         source_lang = source_lang_flag.split(" ", 1)[1]
         target_lang = target_lang_flag.split(" ", 1)[1]
 
-        input_text = st.text_area("Enter text to translate", height=150, placeholder="Type here...", key="translate_input")
+        # Use empty string if clear was pressed
+        default_text = "" if st.session_state.clear_input else None
+        if st.session_state.clear_input:
+            st.session_state.clear_input = False
 
-        # Clear button
-        if st.button("🗑️ Clear"):
-            st.session_state["translate_input"] = ""
-            st.rerun()
+        input_text = st.text_area(
+            "Enter text to translate",
+            value="" if default_text is not None else st.session_state.get("last_input", ""),
+            height=150,
+            placeholder="Type here..."
+        )
+
+        # Save current input
+        st.session_state.last_input = input_text
 
         translations = {
             ("English", "Filipino"): {
@@ -130,30 +138,35 @@ else:
             for phrase in translations[pair].keys():
                 st.markdown(f"- `{phrase}`")
 
-        if st.button("Translate"):
-            if input_text.strip():
-                key = input_text.strip().lower()
-                result = translations.get(pair, {}).get(key)
-                if result:
-                    st.success(f"✅ Translation ({source_lang_flag} → {target_lang_flag}):")
-                    st.markdown(f"### {result}")
+        col_a, col_b = st.columns([1, 1])
+        with col_a:
+            if st.button("Translate"):
+                if input_text.strip():
+                    key = input_text.strip().lower()
+                    result = translations.get(pair, {}).get(key)
+                    if result:
+                        st.success(f"✅ Translation ({source_lang_flag} → {target_lang_flag}):")
+                        st.markdown(f"### {result}")
+                        st.code(result, language=None)
+                        st.caption("👆 Click the copy icon on the top right of the box to copy!")
 
-                    # Copy to clipboard button
-                    st.code(result, language=None)
-                    st.caption("👆 Click the copy icon on the top right of the box to copy!")
-
-                    st.session_state.recent_translations.insert(0, {
-                        "from": source_lang_flag,
-                        "to": target_lang_flag,
-                        "original": input_text,
-                        "translated": result
-                    })
-                    st.session_state.recent_translations = st.session_state.recent_translations[:10]
-                    st.rerun()
+                        st.session_state.recent_translations.insert(0, {
+                            "from": source_lang_flag,
+                            "to": target_lang_flag,
+                            "original": input_text,
+                            "translated": result
+                        })
+                        st.session_state.recent_translations = st.session_state.recent_translations[:10]
+                    else:
+                        st.warning("⚠️ Phrase not found. Try one of the example phrases listed above.")
                 else:
-                    st.warning("⚠️ Phrase not found. Try one of the example phrases listed above.")
-            else:
-                st.warning("Please enter some text to translate.")
+                    st.warning("Please enter some text to translate.")
+
+        with col_b:
+            if st.button("🗑️ Clear"):
+                st.session_state.clear_input = True
+                st.session_state.last_input = ""
+                st.rerun()
 
     elif st.session_state.page == "Recent":
         st.header(f"🕐 Recent Translations ({len(st.session_state.recent_translations)})")
