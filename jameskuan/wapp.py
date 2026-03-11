@@ -8,6 +8,8 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_info = {}
     st.session_state.page = "Home"
+if "recent_translations" not in st.session_state:
+    st.session_state.recent_translations = []
 
 # ---------------- LOGIN PAGE ----------------
 if not st.session_state.logged_in:
@@ -29,20 +31,26 @@ if not st.session_state.logged_in:
 else:
     user = st.session_state.user_info
 
-    # SIDEBAR MENU using selectbox
+    # SIDEBAR MENU using radio (no typing allowed)
     st.sidebar.title("Menu")
-    page_choice = st.sidebar.selectbox(
+
+    recent_count = len(st.session_state.recent_translations)
+    recent_label = f"🕐 Recent ({recent_count})" if recent_count > 0 else "🕐 Recent"
+
+    page_choice = st.sidebar.radio(
         "Navigate",
-        ["🏠 Home", "🕐 Recent", "ℹ️ About Us", "⚙️ Settings"],
+        ["🏠 Home", recent_label, "ℹ️ About Us", "⚙️ Settings"],
+        label_visibility="collapsed"
     )
 
-    page_map = {
-        "🏠 Home": "Home",
-        "🕐 Recent": "Recent",
-        "ℹ️ About Us": "About",
-        "⚙️ Settings": "Settings",
-    }
-    st.session_state.page = page_map[page_choice]
+    if "Home" in page_choice:
+        st.session_state.page = "Home"
+    elif "Recent" in page_choice:
+        st.session_state.page = "Recent"
+    elif "About" in page_choice:
+        st.session_state.page = "About"
+    elif "Settings" in page_choice:
+        st.session_state.page = "Settings"
 
     # ---------------- PAGES ----------------
 
@@ -50,14 +58,26 @@ else:
         st.header("🌐 Translator")
         st.write(f"Welcome, **{user['name']}**! Translate between English, Filipino, and Japanese.")
 
+        # Language flags
+        lang_options = ["🇺🇸 English", "🇵🇭 Filipino", "🇯🇵 Japanese"]
+
         col1, col2 = st.columns(2)
         with col1:
-            source_lang = st.selectbox("From", ["English", "Filipino", "Japanese"])
+            source_lang_flag = st.selectbox("From", lang_options)
         with col2:
-            target_options = [l for l in ["English", "Filipino", "Japanese"] if l != source_lang]
-            target_lang = st.selectbox("To", target_options)
+            target_options = [l for l in lang_options if l != source_lang_flag]
+            target_lang_flag = st.selectbox("To", target_options)
 
-        input_text = st.text_area("Enter text to translate", height=150, placeholder="Type here...")
+        # Strip flag for dictionary lookup
+        source_lang = source_lang_flag.split(" ", 1)[1]
+        target_lang = target_lang_flag.split(" ", 1)[1]
+
+        input_text = st.text_area("Enter text to translate", height=150, placeholder="Type here...", key="translate_input")
+
+        # Clear button
+        if st.button("🗑️ Clear"):
+            st.session_state["translate_input"] = ""
+            st.rerun()
 
         translations = {
             ("English", "Filipino"): {
@@ -115,33 +135,42 @@ else:
                 key = input_text.strip().lower()
                 result = translations.get(pair, {}).get(key)
                 if result:
-                    st.success(f"✅ Translation ({source_lang} → {target_lang}):")
+                    st.success(f"✅ Translation ({source_lang_flag} → {target_lang_flag}):")
                     st.markdown(f"### {result}")
 
-                    if "recent_translations" not in st.session_state:
-                        st.session_state.recent_translations = []
+                    # Copy to clipboard button
+                    st.code(result, language=None)
+                    st.caption("👆 Click the copy icon on the top right of the box to copy!")
+
                     st.session_state.recent_translations.insert(0, {
-                        "from": source_lang,
-                        "to": target_lang,
+                        "from": source_lang_flag,
+                        "to": target_lang_flag,
                         "original": input_text,
                         "translated": result
                     })
                     st.session_state.recent_translations = st.session_state.recent_translations[:10]
+                    st.rerun()
                 else:
                     st.warning("⚠️ Phrase not found. Try one of the example phrases listed above.")
             else:
                 st.warning("Please enter some text to translate.")
 
     elif st.session_state.page == "Recent":
-        st.header("🕐 Recent Translations")
+        st.header(f"🕐 Recent Translations ({len(st.session_state.recent_translations)})")
 
-        if "recent_translations" not in st.session_state or not st.session_state.recent_translations:
+        if not st.session_state.recent_translations:
             st.info("No recent translations yet. Go to Home to start translating!")
         else:
+            if st.button("🗑️ Clear History"):
+                st.session_state.recent_translations = []
+                st.rerun()
+
             for i, item in enumerate(st.session_state.recent_translations):
                 with st.expander(f"{item['from']} → {item['to']}: {item['original'][:40]}"):
                     st.write(f"**Original ({item['from']}):** {item['original']}")
                     st.write(f"**Translated ({item['to']}):** {item['translated']}")
+                    st.code(item['translated'], language=None)
+                    st.caption("👆 Click the copy icon to copy the translation!")
 
     elif st.session_state.page == "About":
         st.header("ℹ️ About Us")
